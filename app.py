@@ -10,6 +10,7 @@ from scipy.sparse import issparse
 nltk.download('stopwords')
 ps = PorterStemmer()
 
+
 # Your preprocessing function stays the same
 def transform_text(text):
     token = text.lower().split()
@@ -18,15 +19,18 @@ def transform_text(text):
     y = [ps.stem(word) for word in y]
     return " ".join(y)
 
+
 # Add DenseTransformer class here BEFORE loading model
 class DenseTransformer(BaseEstimator, TransformerMixin):
     def fit(self, x, y=None):
         return self
+
     def transform(self, x, y=None):
         if issparse(x):
             return x.toarray()
         else:
             return x
+
 
 # Load vectorizer and your saved ensemble model
 tfidf = pickle.load(open('vectorizer.pkl', 'rb'))
@@ -42,10 +46,25 @@ if st.button('Predict'):
     else:
         transformed_sms = transform_text(input_sms)
         vector_input = tfidf.transform([transformed_sms])
-        result = model.predict(vector_input)[0]
+
+        # NEW: Get probability instead of direct prediction
+        result_proba = model.predict_proba(vector_input)[0]
+        spam_probability = result_proba[1]  # Probability of being spam
+
+        # NEW: Lower threshold from 0.5 to 0.30
+        if spam_probability >= 0.30:
+            result = 1  # Spam
+        else:
+            result = 0  # Not spam
+
+        # Display result
         if result == 1:
             st.header("Spam")
         else:
             st.header("Not Spam")
+
+        # NEW: Show confidence level
+        st.write(f"Spam probability: {spam_probability:.1%}")
+
 else:
     st.write("Enter a message and click Predict.")
